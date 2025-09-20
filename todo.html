@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultimate Todo App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #a0e9fd, #f7d6e0);
+      display: flex;
+      justify-content: center;
+      padding-top: 50px;
+      transition: background 0.3s;
+    }
+    body.dark {
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      color: #fff;
+    }
+
+    #todo-container {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 25px;
+      border-radius: 15px;
+      width: 360px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark #todo-container {
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #mode-toggle, #clear-all {
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #4db6ac;
+      color: white;
+      transition: background 0.2s;
+    }
+
+    #mode-toggle:hover, #clear-all:hover {
+      background: #45a049;
+    }
+
+    #todo-input {
+      width: 70%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      outline: none;
+      transition: box-shadow 0.2s;
+    }
+
+    #todo-input:focus {
+      box-shadow: 0 0 8px #4caf50;
+      border-color: #4caf50;
+    }
+
+    #add-btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background: #4caf50;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-left: 5px;
+    }
+
+    #add-btn:hover {
+      background: #45a049;
+      transform: scale(1.05);
+    }
+
+    #todo-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    li {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #f1f8e9;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: grab;
+      transition: transform 0.2s, background 0.3s, opacity 0.3s;
+    }
+
+    body.dark li {
+      background: rgba(255,255,255,0.1);
+    }
+
+    li.completed span {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    li button {
+      background: #f44336;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    li button:hover {
+      background: #da190b;
+    }
+
+    li span {
+      flex-grow: 1;
+      padding-right: 10px;
+    }
+
+    @media(max-width: 400px){
+      #todo-container { width: 90%; }
+      li { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="todo-container">
+    <h2>Ultimate Todo App</h2>
+    <button id="mode-toggle">Toggle Dark/Light Mode</button>
+    <input type="text" id="todo-input" placeholder="Enter a task">
+    <button id="add-btn">Add</button>
+    <button id="clear-all">Clear All</button>
+    <ul id="todo-list"></ul>
+  </div>
+
+  <script>
+    const input = document.getElementById('todo-input');
+    const addBtn = document.getElementById('add-btn');
+    const todoList = document.getElementById('todo-list');
+    const modeToggle = document.getElementById('mode-toggle');
+    const clearAllBtn = document.getElementById('clear-all');
+
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+    // Render tasks on load
+    window.onload = renderTasks;
+
+    // Add task
+    addBtn.addEventListener('click', () => {
+      const taskText = input.value.trim();
+      if(!taskText) return alert("Enter a task!");
+      const task = { text: taskText, completed: false };
+      tasks.push(task);
+      saveTasks();
+      input.value = '';
+      renderTasks();
+    });
+
+    // Enter key
+    input.addEventListener('keypress', e => { if(e.key==='Enter') addBtn.click(); });
+
+    // Toggle dark/light mode
+    modeToggle.addEventListener('click', () => { document.body.classList.toggle('dark'); });
+
+    // Clear all tasks
+    clearAllBtn.addEventListener('click', () => {
+      if(confirm("Clear all tasks?")){
+        tasks = [];
+        saveTasks();
+        renderTasks();
+      }
+    });
+
+    function renderTasks(){
+      todoList.innerHTML = '';
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.draggable = true;
+        li.innerHTML = `<span>${task.text}</span><button>Delete</button>`;
+        if(task.completed) li.classList.add('completed');
+
+        // Toggle complete on click
+        li.querySelector('span').addEventListener('click', () => {
+          tasks[index].completed = !tasks[index].completed;
+          saveTasks();
+          renderTasks();
+        });
+
+        // Delete task
+        li.querySelector('button').addEventListener('click', () => {
+          li.style.opacity = 0;
+          li.style.transform = 'translateX(-100px)';
+          setTimeout(() => {
+            tasks.splice(index,1);
+            saveTasks();
+            renderTasks();
+          }, 300);
+        });
+
+        // Drag & Drop
+        li.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', index); });
+        li.addEventListener('dragover', e => e.preventDefault());
+        li.addEventListener('drop', e => {
+          const from = e.dataTransfer.getData('text');
+          const to = index;
+          const movedTask = tasks.splice(from,1)[0];
+          tasks.splice(to,0,movedTask);
+          saveTasks();
+          renderTasks();
+        });
+
+        todoList.appendChild(li);
+      });
+    }
+
+    function saveTasks(){
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+  </script>
+</body>
+</html>
